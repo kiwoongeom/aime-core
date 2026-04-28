@@ -182,9 +182,18 @@ namespace cryptonote
 
   bool checkpoints::init_default_checkpoints(network_type nettype)
   {
-    // Aime: no hardcoded checkpoints. Fresh chain — checkpoints would falsely reject our blocks.
-    // Below entries are kept as reference (Monero's mainnet/testnet/stagenet checkpoints).
-    // Will be replaced with Aime-specific checkpoints once chain accumulates history.
+    // Aime: no hardcoded checkpoints yet — fresh chain.
+    //
+    // To add checkpoints (recommended once chain has stable history):
+    //   if (nettype == MAINNET) {
+    //     ADD_CHECKPOINT2(<height>, "<block_hash>", "<cumulative_difficulty>");
+    //     ...
+    //   }
+    //
+    // Checkpoints rejected blocks at known heights from chain reorganization.
+    // Useful after chain has thousands of blocks of stable history.
+    //
+    // Monero's checkpoints (kept below as reference for format) are skipped.
     return true;
     if (nettype == TESTNET)
     {

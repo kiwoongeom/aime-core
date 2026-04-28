@@ -703,33 +703,29 @@ namespace nodetool
   std::set<std::string> node_server<t_payload_net_handler>::get_ip_seed_nodes() const
   {
     std::set<std::string> full_addrs;
+    // Aime hardcoded seed nodes.
+    // Replace these with your real seed node IPs/domains once deployed.
+    // Format: "host:port" — use port 17080 (mainnet), 27080 (testnet), 37080 (stagenet)
     if (m_nettype == cryptonote::TESTNET)
     {
-      full_addrs.insert("176.9.0.187:28080");
-      full_addrs.insert("192.99.8.110:28080");
-      full_addrs.insert("37.187.74.171:28080");
-      full_addrs.insert("88.99.195.15:28080");
-      full_addrs.insert("5.104.84.64:28080");
+      // Aime testnet seeds (placeholders — replace before deploy):
+      // full_addrs.insert("seed1.testnet.aime.network:27080");
+      // full_addrs.insert("seed2.testnet.aime.network:27080");
     }
     else if (m_nettype == cryptonote::STAGENET)
     {
-      full_addrs.insert("176.9.0.187:38080");
-      full_addrs.insert("192.99.8.110:38080");
-      full_addrs.insert("37.187.74.171:38080");
-      full_addrs.insert("88.99.195.15:38080");
-      full_addrs.insert("5.104.84.64:38080");
+      // Aime stagenet seeds (placeholders — replace before deploy):
+      // full_addrs.insert("seed1.stagenet.aime.network:37080");
     }
     else if (m_nettype == cryptonote::FAKECHAIN)
     {
     }
     else
     {
-      full_addrs.insert("176.9.0.187:18080");
-      full_addrs.insert("88.198.163.90:18080");
-      full_addrs.insert("192.99.8.110:18080");
-      full_addrs.insert("37.187.74.171:18080");
-      full_addrs.insert("88.99.195.15:18080");
-      full_addrs.insert("5.104.84.64:18080");
+      // Aime mainnet seeds (placeholders — replace before deploy):
+      // full_addrs.insert("seed1.aime.network:17080");
+      // full_addrs.insert("seed2.aime.network:17080");
+      // full_addrs.insert("seed3.aime.network:17080");
     }
     return full_addrs;
   }

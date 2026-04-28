@@ -182,6 +182,10 @@ namespace cryptonote
 
   bool checkpoints::init_default_checkpoints(network_type nettype)
   {
+    // Aime: no hardcoded checkpoints. Fresh chain — checkpoints would falsely reject our blocks.
+    // Below entries are kept as reference (Monero's mainnet/testnet/stagenet checkpoints).
+    // Will be replaced with Aime-specific checkpoints once chain accumulates history.
+    return true;
     if (nettype == TESTNET)
     {
       ADD_CHECKPOINT2(0,     "48ca7cd3c8de5b6a4d53d2861fbdaedca141553559f9be9520068053cda8430b", "0x1");

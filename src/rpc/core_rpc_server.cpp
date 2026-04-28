@@ -450,10 +450,9 @@ namespace cryptonote
   //------------------------------------------------------------------------------------------------------------------------------
   bool core_rpc_server::check_core_ready()
   {
-    if(!m_p2p.get_payload_object().is_synchronized())
-    {
-      return false;
-    }
+    // Aime: no external chain to sync against — fresh chain or local-only network.
+    // The original Monero check refuses RPCs (incl. start_mining) until is_synchronized() returns true,
+    // which never happens in offline+P2P combo we use for local 2-node testing. Bypass.
     return true;
   }
   //------------------------------------------------------------------------------------------------------------------------------

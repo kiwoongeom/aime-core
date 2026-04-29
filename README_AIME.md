@@ -3,6 +3,11 @@
 > Privacy-focused cryptocurrency forked from Monero v0.18, with custom chain identity.
 > CPU-mineable via RandomX. Fully independent network.
 
+**Created by:** Kiwoong Eom
+**Email:** eric.eom@gmail.com
+**GitHub:** [@kiwoongeom](https://github.com/kiwoongeom)
+**Project started:** 2026-04-27
+
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
 [![Base](https://img.shields.io/badge/forked%20from-Monero%20v0.18.4.6-orange.svg)](https://github.com/monero-project/monero)
 [![PoW](https://img.shields.io/badge/PoW-RandomX-purple.svg)](https://github.com/tevador/RandomX)

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Compact mark for favicons / small UI -->
+  <rect width="64" height="64" rx="12" fill="#5B47CE"/>
+  <g fill="#FFFFFF">
+    <polygon points="20,48 27,18 32,18 25,48"/>
+    <polygon points="37,18 42,18 49,48 44,48"/>
+    <rect x="24" y="34" width="20" height="4"/>
+  </g>
+</svg>

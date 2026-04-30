@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Aime logo: stylized "A" with hexagon (representing block/cell) -->
+  <defs>
+    <linearGradient id="aimeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5B47CE"/>
+      <stop offset="100%" stop-color="#00D9FF"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Outer hexagon (block representation) -->
+  <polygon points="128,16 224,72 224,184 128,240 32,184 32,72"
+           fill="none" stroke="url(#aimeGrad)" stroke-width="8"/>
+
+  <!-- Letter "A" inside, geometric -->
+  <g fill="url(#aimeGrad)">
+    <!-- Left leg -->
+    <polygon points="80,184 110,72 130,72 102,184"/>
+    <!-- Right leg -->
+    <polygon points="146,72 166,72 196,184 178,184"/>
+    <!-- Crossbar -->
+    <rect x="98" y="138" width="80" height="14"/>
+  </g>
+
+  <!-- Subtle dot at apex (genesis) -->
+  <circle cx="128" cy="56" r="6" fill="#00D9FF"/>
+</svg>

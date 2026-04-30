@@ -14,6 +14,9 @@
 
 ---
 
+
+> 🚀 **New here?** Start with [GETTING_STARTED.md](GETTING_STARTED.md) — step-by-step guide for mining, running a node, or just using a wallet.
+
 ## What is Aime?
 
 Aime is a learning-focused cryptocurrency project that forks the Monero codebase to create an independent privacy chain. It inherits Monero's strong privacy guarantees (ring signatures, RingCT, Bulletproofs+) while establishing its own network identity, address format, and genesis block.

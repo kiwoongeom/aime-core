@@ -1,0 +1,29 @@
+From 606455ca0881b28371a5cbf37f54cfbf6cbd6cb9 Mon Sep 17 00:00:00 2001
+From: Aime Dev <aime@local>
+Date: Tue, 28 Apr 2026 00:45:15 -0400
+Subject: [PATCH 4/7] Phase 8: disable Monero hardcoded checkpoints (Aime is
+ fresh chain)
+
+Mining test verified: block 1 reward 17.5922 AIME matches Phase 7 RPC prediction. LWMA-2 difficulty adjustment working (1 -> 8587 in 4 blocks). Each block has unique nonce (real RandomX PoW). Aime chain is now provably alive: produces blocks, validates them, adjusts difficulty.
+---
+ src/checkpoints/checkpoints.cpp | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/checkpoints/checkpoints.cpp b/src/checkpoints/checkpoints.cpp
+index 94d390509..551a14af8 100644
+--- a/src/checkpoints/checkpoints.cpp
++++ b/src/checkpoints/checkpoints.cpp
+@@ -182,6 +182,10 @@ namespace cryptonote
+ 
+   bool checkpoints::init_default_checkpoints(network_type nettype)
+   {
++    // Aime: no hardcoded checkpoints. Fresh chain — checkpoints would falsely reject our blocks.
++    // Below entries are kept as reference (Monero's mainnet/testnet/stagenet checkpoints).
++    // Will be replaced with Aime-specific checkpoints once chain accumulates history.
++    return true;
+     if (nettype == TESTNET)
+     {
+       ADD_CHECKPOINT2(0,     "48ca7cd3c8de5b6a4d53d2861fbdaedca141553559f9be9520068053cda8430b", "0x1");
+-- 
+2.43.0
+

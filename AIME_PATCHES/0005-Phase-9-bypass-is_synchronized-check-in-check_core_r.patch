@@ -1,0 +1,31 @@
+From faf6e97d5bf9e4b20874ff52d87cb9ab0351c1fc Mon Sep 17 00:00:00 2001
+From: Aime Dev <aime@local>
+Date: Tue, 28 Apr 2026 01:19:44 -0400
+Subject: [PATCH 5/7] Phase 9: bypass is_synchronized check in check_core_ready
+
+Monero refuses RPCs (incl. start_mining) until is_synchronized() returns true. For a fresh fork with no upstream chain to sync against, this never becomes true with 0 peers, blocking RPC mining. Patch makes check_core_ready always return true. Verified: 2 local nodes, A mines to height 4, B syncs identical top hash f88650e527e7d380f998b8ce8a38ce89aa8f425df2c01b4581ae6a8a18aa3277 within 5s of peer handshake.
+---
+ src/rpc/core_rpc_server.cpp | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/src/rpc/core_rpc_server.cpp b/src/rpc/core_rpc_server.cpp
+index c68449630..aa00f574f 100644
+--- a/src/rpc/core_rpc_server.cpp
++++ b/src/rpc/core_rpc_server.cpp
+@@ -450,10 +450,9 @@ namespace cryptonote
+   //------------------------------------------------------------------------------------------------------------------------------
+   bool core_rpc_server::check_core_ready()
+   {
+-    if(!m_p2p.get_payload_object().is_synchronized())
+-    {
+-      return false;
+-    }
++    // Aime: no external chain to sync against — fresh chain or local-only network.
++    // The original Monero check refuses RPCs (incl. start_mining) until is_synchronized() returns true,
++    // which never happens in offline+P2P combo we use for local 2-node testing. Bypass.
+     return true;
+   }
+   //------------------------------------------------------------------------------------------------------------------------------
+-- 
+2.43.0
+

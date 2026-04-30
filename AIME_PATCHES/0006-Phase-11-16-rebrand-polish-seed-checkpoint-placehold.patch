@@ -1,0 +1,1602 @@
+From aca481b3446b27c530041118dc215257bf88d7d2 Mon Sep 17 00:00:00 2001
+From: Aime Dev <aime@local>
+Date: Tue, 28 Apr 2026 03:22:17 -0400
+Subject: [PATCH 6/7] Phase 11+16: rebrand polish + seed/checkpoint
+ placeholders
+
+Banner Monero Fluorine Fermi -> Aime Genesis (19 files + version.cpp.in). Seeds replaced with Aime placeholder comments. Checkpoints cleaner. Added README_AIME, INSTALL, HOW_TO_MINE, RUN_NODE, API docs.
+---
+ API.md                                        | 284 ++++++++++++++++++
+ HOW_TO_MINE.md                                | 207 +++++++++++++
+ INSTALL.md                                    | 265 ++++++++++++++++
+ README_AIME.md                                | 121 ++++++++
+ RUN_NODE.md                                   | 272 +++++++++++++++++
+ .../blockchain_ancestry.cpp                   |   2 +-
+ .../blockchain_blackball.cpp                  |   2 +-
+ src/blockchain_utilities/blockchain_depth.cpp |   2 +-
+ .../blockchain_export.cpp                     |   2 +-
+ .../blockchain_import.cpp                     |   2 +-
+ src/blockchain_utilities/blockchain_prune.cpp |   2 +-
+ .../blockchain_prune_known_spent_data.cpp     |   2 +-
+ src/blockchain_utilities/blockchain_stats.cpp |   2 +-
+ src/blockchain_utilities/blockchain_usage.cpp |   2 +-
+ src/checkpoints/checkpoints.cpp               |  15 +-
+ src/daemon/command_server.cpp                 |   2 +-
+ src/daemon/executor.cpp                       |   2 +-
+ src/daemon/main.cpp                           |   6 +-
+ src/daemonizer/posix_daemonizer.inl           |   2 +-
+ src/daemonizer/windows_daemonizer.inl         |   2 +-
+ src/debug_utilities/cn_deserialize.cpp        |   2 +-
+ src/debug_utilities/dns_checks.cpp            |   2 +-
+ src/gen_ssl_cert/gen_ssl_cert.cpp             |   4 +-
+ src/p2p/net_node.inl                          |  28 +-
+ src/simplewallet/simplewallet.cpp             |   2 +-
+ src/version.cpp.in                            |   2 +-
+ src/wallet/wallet_args.cpp                    |   6 +-
+ 27 files changed, 1198 insertions(+), 44 deletions(-)
+ create mode 100644 API.md
+ create mode 100644 HOW_TO_MINE.md
+ create mode 100644 INSTALL.md
+ create mode 100644 README_AIME.md
+ create mode 100644 RUN_NODE.md
+
+diff --git a/API.md b/API.md
+new file mode 100644
+index 000000000..7c6c72d89
+--- /dev/null
++++ b/API.md
+@@ -0,0 +1,284 @@
++# Aime RPC API Reference
++
++> Aime daemon (`aimed`) and wallet RPC (`aime-wallet-rpc`) expose JSON-RPC and REST endpoints
++> compatible with Monero's API spec.
++
++---
++
++## Daemon RPC (port 17081)
++
++### REST Endpoints (GET/POST direct)
++
++| Endpoint | Method | Purpose |
++|---|---|---|
++| `/get_info` | GET | Chain status |
++| `/get_height` | GET/POST | Current chain height |
++| `/get_blocks.bin` | POST | Bulk blocks (binary) |
++| `/get_outs` | POST | Output details |
++| `/get_transactions` | POST | Tx details by hash |
++| `/start_mining` | POST | Start built-in miner |
++| `/stop_mining` | POST | Stop miner |
++| `/mining_status` | GET | Miner state |
++| `/save_bc` | POST | Force flush DB to disk |
++| `/get_peer_list` | GET | Known peers |
++
++### JSON-RPC (POST /json_rpc)
++
++Format:
++```json
++{
++    "jsonrpc": "2.0",
++    "id": "0",
++    "method": "<method_name>",
++    "params": { ... }
++}
++```
++
++#### Block-related
++
++| Method | Params | Returns |
++|---|---|---|
++| `get_block_count` | (none) | `{count, status}` |
++| `get_block_template` | `wallet_address`, `reserve_size` | Candidate block for mining |
++| `submit_block` | `[block_hex]` | Submit mined block |
++| `get_block_header_by_hash` | `hash` | Block header by hash |
++| `get_block_header_by_height` | `height` | Block header by height |
++| `get_block` | `height` or `hash` | Full block with txs |
++| `get_last_block_header` | (none) | Latest block header |
++
++#### Network/peer
++
++| Method | Returns |
++|---|---|
++| `get_connections` | List of P2P peers |
++| `get_info` | Comprehensive chain state |
++| `set_log_level` | Adjust logging |
++| `get_bans` | IP ban list |
++| `set_bans` | Add/remove IP bans |
++
++#### Transaction pool
++
++| Method | Returns |
++|---|---|
++| `get_transaction_pool` | All mempool txs |
++| `get_transaction_pool_stats` | Mempool summary |
++| `flush_txpool` | Clear specific txs from pool |
++
++---
++
++## Wallet RPC (port custom, default 18082 for Monero, can use any)
++
++Run separately:
++```bash
++aime-wallet-rpc --rpc-bind-port 28083 \
++                --wallet-file mywallet \
++                --password "yourpw" \
++                --daemon-address 127.0.0.1:17081
++```
++
++### JSON-RPC methods
++
++#### Balance & address
++
++| Method | Returns |
++|---|---|
++| `get_balance` | `{balance, unlocked_balance, multisig_import_needed, ...}` |
++| `get_address` | Wallet primary address + sub-addresses |
++| `create_address` | Generate new sub-address |
++| `label_address` | Set label on a sub-address |
++
++#### Transactions
++
++| Method | Returns |
++|---|---|
++| `transfer` | Send AIME (single recipient) |
++| `transfer_split` | Send AIME (multiple recipients or split) |
++| `relay_tx` | Re-broadcast a tx |
++| `get_transfers` | List wallet transactions |
++| `get_transfer_by_txid` | Specific tx detail |
++| `get_payments` | Payment ID specific |
++| `incoming_transfers` | List of incoming UTXOs |
++
++#### Wallet management
++
++| Method | Action |
++|---|---|
++| `create_wallet` | Create new wallet (when running with no wallet) |
++| `open_wallet` | Open existing |
++| `close_wallet` | Close current |
++| `change_wallet_password` | Self-explanatory |
++| `restore_deterministic_wallet` | From seed |
++
++---
++
++## Examples
++
++### Get chain state
++
++```bash
++curl http://127.0.0.1:17081/get_info | jq
++
++{
++  "alt_blocks_count": 0,
++  "block_size_limit": 600000,
++  "block_size_median": 300000,
++  "bootstrap_daemon_address": "",
++  "cumulative_difficulty": 1,
++  "difficulty": 1,
++  "height": 1,
++  "incoming_connections_count": 0,
++  "outgoing_connections_count": 0,
++  "status": "OK",
++  "target": 60,
++  "target_height": 0,
++  "top_block_hash": "b78e36c0afe10470ec6dcc71c8ae8c1e4847d979aa788deb67dfa837bdcdfb29",
++  ...
++}
++```
++
++### Get genesis block
++
++```bash
++curl -X POST http://127.0.0.1:17081/json_rpc \
++  -H "Content-Type: application/json" \
++  -d '{
++    "jsonrpc":"2.0","id":"0",
++    "method":"get_block_header_by_height",
++    "params":{"height":0}
++  }'
++```
++
++### Start mining
++
++```bash
++curl -X POST http://127.0.0.1:17081/start_mining \
++  -H "Content-Type: application/json" \
++  -d '{
++    "miner_address":"AQWWPyLG4exW1QNg2HZnG...",
++    "threads_count":4,
++    "do_background_mining":false,
++    "ignore_battery":true
++  }'
++
++# {"status":"OK","untrusted":false}
++```
++
++### Send a transaction (via wallet RPC)
++
++```bash
++curl -X POST http://127.0.0.1:28083/json_rpc \
++  -H "Content-Type: application/json" \
++  -d '{
++    "jsonrpc":"2.0","id":"0",
++    "method":"transfer",
++    "params":{
++      "destinations":[{"amount":1000000000000,"address":"AbCdEf..."}],
++      "priority":1,
++      "ring_size":16
++    }
++  }'
++```
++
++> Amounts are in atomic units. 1 AIME = 10^12 atomic.
++
++---
++
++## Restricted RPC
++
++When daemon is started with `--restricted-rpc`, the following methods are blocked:
++
++- `start_mining`, `stop_mining`
++- `set_log_level`, `set_bans`
++- `flush_txpool`
++- `save_bc`
++- `submit_block` (only from authorized peers)
++- Several other administrative methods
++
++This is suitable for public-facing nodes (e.g., your block explorer's daemon). Private mining nodes should NOT use restricted mode.
++
++---
++
++## Authentication (optional)
++
++For wallet RPC and daemon RPC over public network:
++
++```bash
++aime-wallet-rpc --rpc-login user:password \
++                ...
++```
++
++Then:
++
++```bash
++curl -u user:password ...
++```
++
++For digest auth (more secure than basic):
++
++```bash
++aime-wallet-rpc --rpc-login user:password
++# Use curl with --digest flag
++```
++
++For TLS:
++
++```bash
++aime-wallet-rpc --rpc-ssl enabled \
++                --rpc-ssl-private-key /path/to/key.pem \
++                --rpc-ssl-certificate /path/to/cert.pem \
++                ...
++```
++
++---
++
++## ZMQ Pub/Sub (port 17082)
++
++For real-time event subscriptions (e.g., new blocks):
++
++```python
++import zmq
++ctx = zmq.Context()
++sub = ctx.socket(zmq.SUB)
++sub.connect("tcp://127.0.0.1:17082")
++sub.subscribe("json-minimal-chain_main")
++sub.subscribe("json-minimal-txpool_add")
++
++while True:
++    msg = sub.recv_multipart()
++    print(msg)
++```
++
++Topics:
++- `json-minimal-chain_main` — new blocks
++- `json-minimal-txpool_add` — new mempool txs
++- `json-full-chain_main` — full block data
++- (more — see Monero ZMQ docs)
++
++---
++
++## Compatibility with Monero Tools
++
++Because Aime uses identical RPC API as Monero v0.18:
++- **xmrig** miner works (just point at aimed RPC)
++- **monero-wallet-cli** can technically connect (but address format will mismatch)
++- **xmrblocks** explorer works (with patches in our fork)
++- Any Monero RPC library should work — Python (monero), JS (monero-rpc), etc.
++
++---
++
++## Rate Limits
++
++The daemon has no built-in rate limits, but for public nodes consider:
++- nginx/Caddy reverse proxy with rate limiting
++- Cloudflare in front
++- `--rpc-payment-address <ADDR>` to require RPC payments (advanced)
++
++---
++
++## See Also
++
++- Monero RPC docs: https://docs.getmonero.org/rpc-library/monero-wallet-rpc/
++- These largely apply to Aime as well, with these differences:
++  - Address prefix 56 (instead of 18)
++  - Default ports 17080-17082
++  - Network ID `1dd945d7-...`
+diff --git a/HOW_TO_MINE.md b/HOW_TO_MINE.md
+new file mode 100644
+index 000000000..635ba2479
+--- /dev/null
++++ b/HOW_TO_MINE.md
+@@ -0,0 +1,207 @@
++# How to Mine Aime (AIME)
++
++> Aime uses RandomX, a CPU-friendly proof-of-work algorithm.
++> Anyone with a modern CPU can mine effectively.
++
++---
++
++## Quick Start (Solo Mining)
++
++### 1. Get the Aime daemon
++
++```bash
++git clone <aime-repo> aime
++cd aime
++make release -j$(nproc)
++cd build/Linux/aime-main/release/bin
++```
++
++### 2. Create a wallet (you need an address to receive rewards)
++
++```bash
++./aime-wallet-cli --generate-new-wallet mywallet
++# Choose password, language, write down the 25-word seed.
++# Note your address — starts with "A" (e.g., AQWWPyLG4exW1QNg...)
++```
++
++### 3. Start mining
++
++```bash
++./aimed --start-mining <YOUR_AIME_ADDRESS> --mining-threads 2
++```
++
++That's it. The daemon will mine blocks and credit them to your address. Rewards become spendable after 60 confirmations (~2 hours).
++
++---
++
++## Recommended Setup (XMRig + Daemon)
++
++XMRig is the standard, optimized RandomX miner. It's faster and more efficient than the daemon's built-in miner.
++
++### 1. Run aimed in non-mining mode
++
++```bash
++./aimed --p2p-bind-port 17080 --rpc-bind-port 17081
++```
++
++### 2. Get XMRig
++
++```bash
++# Build from source (or download pre-built from xmrig.com)
++git clone https://github.com/xmrig/xmrig
++cd xmrig
++mkdir build && cd build
++cmake ..
++make -j$(nproc)
++```
++
++### 3. Configure XMRig for Aime
++
++Create `xmrig.json`:
++
++```json
++{
++    "autosave": true,
++    "cpu": {
++        "enabled": true,
++        "huge-pages": true,
++        "threads": 2
++    },
++    "pools": [
++        {
++            "url": "127.0.0.1:17081",
++            "user": "<YOUR_AIME_ADDRESS>",
++            "pass": "x",
++            "algo": "rx/0",
++            "coin": "monero",
++            "daemon": true
++        }
++    ],
++    "log-file": "xmrig.log"
++}
++```
++
++> **Note:** `coin: "monero"` and `algo: "rx/0"` because Aime uses identical RandomX algorithm. XMRig doesn't need to know "Aime" specifically — it just sees the same RandomX work.
++
++### 4. Run XMRig
++
++```bash
++./xmrig --config=xmrig.json
++```
++
++---
++
++## Mining Pool Setup (For Multiple Miners)
++
++If you want multiple people to mine without each running a full node, set up a pool.
++
++### Pool operator side
++
++```bash
++# Run aimed (full node)
++./aimed --p2p-bind-port 17080 --rpc-bind-port 17081 --restricted-rpc
++
++# Install P2Pool or NOMP, configure to point at aimed RPC
++# Expose stratum port (e.g., :3333) publicly
++```
++
++### Miner side (anyone)
++
++```bash
++./xmrig -o pool.aime.network:3333 -u <YOUR_AIME_ADDRESS> -p worker1 --algo=rx/0
++```
++
++The pool distributes rewards proportionally to submitted shares.
++
++---
++
++## Hardware Performance (RandomX)
++
++| CPU | Approx. hashrate |
++|---|---|
++| Intel i5 (4 cores) | ~2-3 KH/s |
++| Intel i7 (8 cores) | ~5-8 KH/s |
++| AMD Ryzen 5 5600 | ~6-8 KH/s |
++| AMD Ryzen 9 7950X | ~25-30 KH/s |
++| AMD Threadripper 3960X (24c/48t) | ~30-35 KH/s |
++| RTX 4090 (GPU) | ~3-5 KH/s (CPU is more efficient!) |
++
++> RandomX is intentionally inefficient on GPUs and infeasible on ASICs.
++> A modern desktop CPU is ideal mining hardware.
++
++---
++
++## Memory Requirements
++
++RandomX needs:
++- **Light mode** (~256 MB RAM) — for verification only
++- **Full mode** (~2 GB RAM) — for mining (much faster)
++
++For mining, ensure huge pages are enabled:
++
++```bash
++# Linux
++sudo sysctl -w vm.nr_hugepages=1280
++echo "vm.nr_hugepages=1280" | sudo tee -a /etc/sysctl.conf
++```
++
++---
++
++## Troubleshooting
++
++### "BUSY" status when calling start_mining
++- Aime patched this in Phase 9 — should not happen with current code.
++- If it does, ensure you're using the latest aimed binary.
++
++### "huge pages: 0 / 1280"
++- Run as root or set `vm.nr_hugepages` (see above).
++- Without huge pages, mining is ~10% slower but still works.
++
++### Low hashrate
++- Check CPU usage — should be near 100% on mining threads
++- Increase `--mining-threads` (typically use cores, not all hyperthreads)
++- Disable CPU power saving / set "performance" governor:
++  ```bash
++  sudo cpupower frequency-set -g performance
++  ```
++
++### Blocks not landing in wallet
++- Wait 60 blocks (~2 hours) for confirmation
++- Run `aime-wallet-cli refresh` to scan for new payments
++- Check `show_transfers` for transaction history
++
++---
++
++## How Mining Rewards Are Calculated
++
++Block reward formula (after v2 hard fork):
++```
++reward = max((MONEY_SUPPLY - already_generated) >> 19, 0.6 AIME)
++```
++
++- First mined block (height 1): ~17.59 AIME (v1, target 60s, esf=20)
++- After v2 (target 120s, esf=19): ~35.18 AIME, decaying
++- Tail emission (when reward < 0.6): permanent 0.6 AIME/block
++
++Estimated annual emission:
++- Year 1: ~5-10M AIME (rough, depends on hash distribution)
++- Year 8+: ~157,000 AIME/year (tail only, approaching 0% inflation)
++
++---
++
++## Mining Etiquette
++
++- **Don't hard 51%-attack a small chain** — even if technically possible, it destroys the project.
++- **Run a full node if you can** — strengthens the network beyond just mining.
++- **Disclose pool fees** — if running a pool, be transparent about fee %.
++- **Use unique worker names** — helps you track which machine is contributing.
++
++---
++
++## Network Status
++
++Check the live state:
++- Daemon RPC: `curl http://127.0.0.1:17081/get_info`
++- Block explorer: `http://explorer.aime.network` (when deployed)
++
++Happy mining! 🎉
+diff --git a/INSTALL.md b/INSTALL.md
+new file mode 100644
+index 000000000..cb5b4119d
+--- /dev/null
++++ b/INSTALL.md
+@@ -0,0 +1,265 @@
++# Aime Installation Guide
++
++> Build and install Aime daemon, CLI wallet, and RPC wallet from source.
++> For GUI wallet and block explorer, see their respective repos.
++
++---
++
++## Supported Platforms
++
++| Platform | Status |
++|---|---|
++| Ubuntu 22.04+ | ✅ Tested |
++| Ubuntu 24.04 | ✅ Tested |
++| Debian 12 | ⚠ Should work, untested |
++| Fedora 39+ | ⚠ Different package names — use equivalents |
++| Arch Linux | ⚠ Should work — most deps in extra/ |
++| macOS | ⚠ Use Homebrew, untested |
++| Windows | 🔬 Use WSL2 + Ubuntu (recommended) |
++
++---
++
++## Prerequisites
++
++### Ubuntu 22.04 / 24.04
++
++```bash
++sudo apt-get update
++sudo apt-get install -y --no-install-recommends \
++  build-essential cmake pkg-config ccache git wget curl ca-certificates \
++  libboost-all-dev libssl-dev libzmq3-dev libunbound-dev libsodium-dev \
++  libunwind-dev liblzma-dev libreadline-dev libldns-dev libexpat1-dev \
++  libpgm-dev libhidapi-dev libusb-1.0-0-dev libprotobuf-dev protobuf-compiler \
++  libudev-dev libnorm-dev libgtest-dev
++```
++
++### Verify build tools
++
++```bash
++gcc --version    # Need >= 9
++cmake --version  # Need >= 3.5
++boost --version  # Need >= 1.58
++```
++
++### Hardware
++
++- **Disk**: 5 GB minimum for source + build
++- **RAM**: 2 GB minimum, 4+ GB recommended for parallel build
++- **CPU**: x86_64, multi-core recommended (build scales linearly)
++
++Build time on various CPUs:
++- AMD Threadripper 3960X (48 threads): ~3-5 minutes
++- Modern desktop (8 threads): ~15-30 minutes
++- Older laptop (4 threads): ~30-60 minutes
++
++---
++
++## Build Aime daemon
++
++### Clone
++
++```bash
++git clone <aime-core-repo> aime
++cd aime
++```
++
++### Build
++
++```bash
++make release -j$(nproc)
++```
++
++This invokes the standard Monero-style Makefile, which:
++1. Creates `build/Linux/aime-main/release/`
++2. Runs CMake to configure
++3. Compiles ~150,000 lines of C++ in parallel
++4. Links static libraries into final binaries
++
++### Output
++
++Built binaries appear at:
++```
++build/Linux/aime-main/release/bin/
++├── aimed                          (~16 MB)
++├── aime-wallet-cli                (~17 MB)
++├── aime-wallet-rpc                (~18 MB)
++├── monero-blockchain-ancestry     (utility)
++├── monero-blockchain-depth        (utility)
++├── monero-blockchain-export       (utility)
++├── monero-blockchain-import       (utility)
++├── monero-blockchain-prune        (utility)
++├── monero-blockchain-stats        (utility)
++└── monero-blockchain-usage        (utility)
++```
++
++### Verify
++
++```bash
++./build/Linux/aime-main/release/bin/aimed --version
++# Expected output: Aime 'Aime Genesis' (v0.18.4.6-...)
++```
++
++---
++
++## Install (Optional)
++
++To install system-wide:
++
++```bash
++sudo cp build/Linux/aime-main/release/bin/{aimed,aime-wallet-cli,aime-wallet-rpc} /usr/local/bin/
++sudo chmod +x /usr/local/bin/aimed /usr/local/bin/aime-wallet-cli /usr/local/bin/aime-wallet-rpc
++```
++
++Now `aimed` etc. are available in PATH.
++
++---
++
++## First Run
++
++### Start the daemon
++
++```bash
++aimed
++# Daemon starts on default ports 17080/17081/17082
++# It will create ~/.aime/ directory for blockchain data
++```
++
++### Create a wallet
++
++In a separate terminal:
++
++```bash
++aime-wallet-cli --generate-new-wallet mywallet
++# Choose password (twice)
++# Choose mnemonic language (e.g., 0 for English)
++# Write down 25-word seed safely!
++# Note your address — starts with "A"
++```
++
++### Connect wallet to daemon
++
++By default, wallet auto-connects to `127.0.0.1:17081`. To connect elsewhere:
++
++```bash
++aime-wallet-cli --daemon-address <NODE_IP>:17081 --wallet-file mywallet
++```
++
++---
++
++## Troubleshooting
++
++### "fatal error: boost/something.hpp: No such file"
++Missing Boost dev headers. Install: `sudo apt-get install libboost-all-dev`
++
++### "ld: cannot find -lXYZ"
++Missing system library. The error message names which one — install corresponding `-dev` package.
++
++### "FAILED: src/blockchain_db/lmdb/db_lmdb.cpp.o"
++Out of memory during build. Reduce parallelism: `make release -j2`
++
++### "Could not find Boost"
++CMake can't auto-detect Boost. Set hint:
++```bash
++cmake -DBOOST_ROOT=/usr/include/boost ..
++```
++
++### Build succeeds but binary segfaults
++Likely glibc mismatch. Make sure build host and run host have compatible glibc versions.
++
++### Slow `make release` even though no source changes
++ccache should help. Verify it's installed and working:
++```bash
++ccache --version  # Should be >= 4.0
++ccache --show-stats  # See cache hit rates after a few builds
++```
++
++---
++
++## Updating
++
++### Pull latest source
++
++```bash
++git fetch
++git pull
++```
++
++### Incremental rebuild
++
++```bash
++make release -j$(nproc)
++```
++
++ccache + Make will only recompile changed files. Typical update build: 1-3 minutes.
++
++### Wallet/blockchain compatibility
++
++- Wallet files: forward-compatible (older wallet works with newer daemon)
++- Blockchain: usually forward-compatible with same major version (v0.18.x)
++- Hard forks may require resync — check release notes
++
++---
++
++## Cross-Compilation (Advanced)
++
++For deterministic / reproducible builds (recommended for releases):
++
++See Monero's `contrib/depends/` documentation. Aime inherits the same toolchain.
++
++```bash
++# Build for Windows from Linux (example)
++cd contrib/depends
++make HOST=x86_64-w64-mingw32 -j$(nproc)
++cd ../..
++make depends target=x86_64-w64-mingw32 tag=v0.0.1-aime
++```
++
++---
++
++## Companion Tools
++
++- **Block Explorer**: `aime-explorer` (forked from xmrblocks)
++  ```bash
++  git clone <aime-explorer-repo>
++  cd xmrblocks/build && cmake -DMONERO_DIR=../../aime ..
++  make
++  ```
++
++- **GUI Wallet**: `aime-gui` (forked from monero-gui)
++  ```bash
++  git clone <aime-gui-repo>
++  cd monero-gui && MANUAL_SUBMODULES=ON make
++  ```
++
++See respective READMEs in those repos for detailed instructions.
++
++---
++
++## Verifying Your Build
++
++After build, verify by running the verification script:
++
++```bash
++bash notes/full_inventory.sh   # If you cloned with notes/
++```
++
++Or manually:
++
++```bash
++./build/Linux/aime-main/release/bin/aimed --version
++./build/Linux/aime-main/release/bin/aime-wallet-cli --version
++
++# Briefly run to check it boots cleanly:
++timeout 3 ./build/Linux/aime-main/release/bin/aimed --offline --no-igd
++# Should print initialization logs and exit at timeout
++```
++
++If versions print and daemon initializes without errors, build is good.
++
++---
++
++## Getting Help
++
++- Check the project's GitHub Issues
++- Review existing logs at `~/.aime/aime.log`
++- Provide full daemon log + system info when reporting issues
+diff --git a/README_AIME.md b/README_AIME.md
+new file mode 100644
+index 000000000..3d5b52d55
+--- /dev/null
++++ b/README_AIME.md
+@@ -0,0 +1,121 @@
++# Aime (AIME)
++
++> Privacy-focused cryptocurrency forked from Monero v0.18, with custom chain identity.
++> CPU-mineable via RandomX. Fully independent network.
++
++[![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
++[![Base](https://img.shields.io/badge/forked%20from-Monero%20v0.18.4.6-orange.svg)](https://github.com/monero-project/monero)
++[![PoW](https://img.shields.io/badge/PoW-RandomX-purple.svg)](https://github.com/tevador/RandomX)
++
++---
++
++## What is Aime?
++
++Aime is a learning-focused cryptocurrency project that forks the Monero codebase to create an independent privacy chain. It inherits Monero's strong privacy guarantees (ring signatures, RingCT, Bulletproofs+) while establishing its own network identity, address format, and genesis block.
++
++**Key facts:**
++- **Ticker:** AIME
++- **Precision:** 1 AIME = 10¹² atomic units
++- **Block time:** 120 seconds (LWMA-2 difficulty adjustment)
++- **PoW:** RandomX (CPU-mineable, ASIC-resistant)
++- **Privacy:** Mandatory — ring size 16, RingCT, Bulletproofs+
++- **Emission:** Monero-orthodox tail emission (~18.13M main + 0.6 AIME/block forever)
++- **Genesis hash:** `b78e36c0afe10470ec6dcc71c8ae8c1e4847d979aa788deb67dfa837bdcdfb29`
++- **Address format:** Starts with `A` (e.g., `AQWWPyLG4exW1...`)
++
++## Network parameters
++
++| Network | P2P | RPC | ZMQ | Address prefix |
++|---------|-----|-----|-----|----------------|
++| Mainnet | 17080 | 17081 | 17082 | 56 |
++| Testnet | 27080 | 27081 | 27082 | 87 |
++| Stagenet | 37080 | 37081 | 37082 | 122 |
++
++NETWORK_ID base: `1dd945d7-c142-4f38-87ce-42a20e325f__` (last byte: 10/11/12)
++
++## Build
++
++See [INSTALL.md](INSTALL.md) for full instructions.
++
++```bash
++# Ubuntu 22.04+
++sudo apt-get install -y build-essential cmake pkg-config ccache git \
++  libboost-all-dev libssl-dev libzmq3-dev libunbound-dev libsodium-dev \
++  libunwind-dev liblzma-dev libreadline-dev libldns-dev libexpat1-dev \
++  libpgm-dev libhidapi-dev libusb-1.0-0-dev libprotobuf-dev protobuf-compiler \
++  libudev-dev libnorm-dev libgtest-dev
++
++git clone <this-repo> aime
++cd aime
++make release -j$(nproc)
++# → ~3-5 min on modern multi-core CPU
++# Output: build/Linux/aime-main/release/bin/{aimed, aime-wallet-cli, aime-wallet-rpc}
++```
++
++## Run a node
++
++```bash
++./aimed --p2p-bind-port 17080 --rpc-bind-port 17081
++```
++
++## Mine
++
++See [HOW_TO_MINE.md](HOW_TO_MINE.md) for detailed mining setup.
++
++```bash
++./aimed --start-mining <YOUR_AIME_ADDRESS> --mining-threads 2
++```
++
++## Wallet
++
++```bash
++./aime-wallet-cli --generate-new-wallet mywallet
++# Generates a 25-word seed and an address starting with "A"
++```
++
++## Companion projects
++
++- **[aime-explorer](#)** — Web block explorer (forked from xmrblocks)
++- **[aime-gui](#)** — Qt/QML graphical wallet (forked from monero-gui)
++
++## Differences from Monero
++
++| Aspect | Monero | Aime |
++|---|---|---|
++| NETWORK_ID | `1230f171-...-a110` | `1dd945d7-...-5f10` |
++| P2P port | 18080 | 17080 |
++| Address prefix | 18 (starts "4") | 56 (starts "A") |
++| Genesis hash | `418015bb...` | `b78e36c0...` |
++| Genesis message | (none) | "Aime 2026/04/27 - Genesis" |
++| Daemon binary | monerod | aimed |
++| Data directory | ~/.bitmonero/ | ~/.aime/ |
++
++Two networks are fully isolated at protocol level (NETWORK_ID), OS level (ports), and visual level (addresses).
++
++## Project status
++
++This is currently a **learning/experimental project**, not a production cryptocurrency. The chain technically functions (verified via block production, P2P sync, mining, balance accounting), but has not been deployed to public infrastructure.
++
++Roadmap toward production:
++- [ ] Public seed nodes (VPS deployment)
++- [ ] DNS seeds in code
++- [ ] Block explorer hosting
++- [ ] Domain + website
++- [ ] Mining pool
++- [ ] Wallet integration (Cake Wallet PR, etc.)
++
++## Acknowledgments
++
++Aime stands on the shoulders of:
++- **The Monero Project** — for the foundational codebase and 12+ years of cryptographic research
++- **Wownero** — as a reference for fork rebranding patterns
++- **RandomX authors** (tevador et al.) — for the ASIC-resistant PoW
++- **CryptoNote v2** — original protocol design
++
++## License
++
++BSD 3-Clause (inherited from Monero). See [LICENSE](LICENSE).
++
++## Contributing
++
++This is currently a single-developer learning project. Issues and PRs welcome but response time may vary.
+diff --git a/RUN_NODE.md b/RUN_NODE.md
+new file mode 100644
+index 000000000..2f5884fd9
+--- /dev/null
++++ b/RUN_NODE.md
+@@ -0,0 +1,272 @@
++# Running an Aime Node
++
++> A full node validates the Aime blockchain and participates in P2P propagation.
++> Running one strengthens the network and gives you trustless RPC access.
++
++---
++
++## Quick Start
++
++```bash
++./aimed
++```
++
++That's it for default settings. Daemon binds to:
++- `127.0.0.1:17080` (P2P, listen — but only loopback)
++- `127.0.0.1:17081` (RPC)
++- `127.0.0.1:17082` (ZMQ)
++
++For others to connect to your node, you need to expose 17080 publicly (see "Public Seed Node" below).
++
++---
++
++## Configurations
++
++### Local Private Node
++
++```bash
++./aimed --offline --no-igd
++```
++- No P2P connections (offline)
++- No UPnP attempts
++
++Use case: testing, isolated experiments.
++
++### Local Node That Accepts Connections
++
++```bash
++./aimed \
++  --p2p-bind-ip 127.0.0.1 \
++  --p2p-bind-port 17080 \
++  --rpc-bind-ip 127.0.0.1 \
++  --rpc-bind-port 17081 \
++  --no-igd \
++  --allow-local-ip
++```
++
++Use case: running 2 nodes on same machine for testing.
++
++### Public Seed Node
++
++```bash
++./aimed \
++  --p2p-bind-ip 0.0.0.0 \
++  --p2p-bind-port 17080 \
++  --confirm-external-bind \
++  --rpc-bind-ip 127.0.0.1 \
++  --rpc-bind-port 17081 \
++  --restricted-rpc \
++  --hide-my-port \
++  --detach \
++  --pidfile /var/run/aimed.pid
++```
++
++- Listens on all interfaces (public IP)
++- Restricted RPC (only safe methods open)
++- Detached (background) with PID file
++- Hide own port (modest privacy)
++
++**Required:** open inbound TCP 17080 on firewall:
++
++```bash
++# UFW
++sudo ufw allow 17080/tcp
++
++# iptables
++sudo iptables -A INPUT -p tcp --dport 17080 -j ACCEPT
++```
++
++### Connect to Existing Seed
++
++```bash
++./aimed \
++  --add-priority-node <SEED_IP>:17080 \
++  --p2p-bind-port 17081
++```
++
++Useful for joining an established Aime network.
++
++---
++
++## Hardware Requirements
++
++| Use case | RAM | Disk | CPU |
++|---|---|---|---|
++| Validation only (no mining) | 1 GB | Growing (initially small) | 1 core |
++| Validation + mining | 2 GB | Growing | 2+ cores |
++| Public seed (bandwidth heavy) | 4 GB | 10+ GB | 2 cores, decent network |
++
++Network usage:
++- Outgoing: peers download blocks/txs (~100 MB/day at low usage)
++- Incoming: peers ask for data (~500 MB/day for active seed)
++
++---
++
++## Useful CLI Commands (in interactive mode)
++
++Run `aimed` without `--detach` to get the prompt, then:
++
++```
++status              # Quick chain status
++print_height        # Current chain height
++print_pl            # Peer list
++print_cn            # Connections
++hard_fork_info      # Hard fork progression
++print_block <h>     # Detailed block view
++sync_info           # Sync state
++```
++
++---
++
++## RPC Examples
++
++```bash
++# Get info
++curl http://127.0.0.1:17081/get_info
++
++# Get block 0 (genesis)
++curl -X POST http://127.0.0.1:17081/json_rpc \
++  -d '{"jsonrpc":"2.0","id":"0","method":"get_block_header_by_height","params":{"height":0}}'
++
++# Submit a block (after mining externally)
++curl -X POST http://127.0.0.1:17081/json_rpc \
++  -d '{"jsonrpc":"2.0","id":"0","method":"submit_block","params":["<BLOCK_HEX>"]}'
++
++# Get connections
++curl -X POST http://127.0.0.1:17081/json_rpc \
++  -d '{"jsonrpc":"2.0","id":"0","method":"get_connections"}'
++```
++
++Restricted RPC (`--restricted-rpc`) blocks methods like:
++- `start_mining` / `stop_mining`
++- `get_peer_list`
++- Wallet RPC operations
++- Block/tx submission (if not from authorized peers)
++
++---
++
++## Monitoring
++
++Quick health check script:
++
++```bash
++#!/bin/bash
++# /usr/local/bin/aimed-health
++H=$(curl -s http://127.0.0.1:17081/get_info | python3 -c "import json,sys;print(json.load(sys.stdin).get('height',0))")
++P=$(curl -s http://127.0.0.1:17081/get_info | python3 -c "import json,sys;d=json.load(sys.stdin);print(d.get('outgoing_connections_count',0)+d.get('incoming_connections_count',0))")
++echo "height=$H peers=$P"
++
++if [ "$H" -lt 1 ] || [ "$P" -lt 1 ]; then
++    echo "WARN: chain not progressing or no peers" >&2
++    exit 1
++fi
++```
++
++Run periodically via cron:
++
++```cron
++*/5 * * * * /usr/local/bin/aimed-health || systemctl restart aimed
++```
++
++---
++
++## Systemd Service
++
++`/etc/systemd/system/aimed.service`:
++
++```ini
++[Unit]
++Description=Aime Daemon
++After=network.target
++
++[Service]
++Type=forking
++User=aime
++ExecStart=/usr/local/bin/aimed \
++  --p2p-bind-ip 0.0.0.0 \
++  --p2p-bind-port 17080 \
++  --confirm-external-bind \
++  --rpc-bind-ip 127.0.0.1 \
++  --rpc-bind-port 17081 \
++  --restricted-rpc \
++  --detach \
++  --pidfile /var/run/aimed.pid
++PIDFile=/var/run/aimed.pid
++Restart=on-failure
++RestartSec=30
++
++[Install]
++WantedBy=multi-user.target
++```
++
++Enable:
++
++```bash
++sudo systemctl daemon-reload
++sudo systemctl enable aimed
++sudo systemctl start aimed
++sudo systemctl status aimed
++```
++
++---
++
++## Backup
++
++What to back up:
++- `~/.aime/lmdb/` — blockchain (re-syncable, but huge)
++- `~/.aime/wallet/` — your wallet keys (CRITICAL — losing means losing funds)
++- 25-word seed (offline, paper) — wallet recovery anywhere
++
++Don't back up:
++- Logs (regrowable)
++- Cache files
++
++---
++
++## Troubleshooting
++
++### Daemon won't start
++- Check port collision: `sudo lsof -i :17080`
++- Check disk space: `df -h ~/.aime`
++- Check log: `tail -50 ~/.aime/aime.log`
++
++### No peers connecting
++- Firewall blocking? `sudo ufw status`
++- ISP blocking inbound? Try outbound-only: remove `--p2p-bind-ip 0.0.0.0`
++- Add manual seeds: `--add-priority-node <known_seed>:17080`
++
++### Chain not syncing
++- Wrong NETWORK_ID? You may have rebuilt against vanilla Monero source
++- Check daemon version matches network's expected version
++
++### Disk filling up
++- Pruning helps: add `--prune-blockchain`
++- Saves ~70% disk space, sacrifices ability to serve full historical data
++
++---
++
++## Operating an Aime Seed Node (For Network Operators)
++
++If you want to be one of the seed nodes that bootstraps new users:
++
++1. Run on a stable VPS with public IP (Vultr/Hetzner/AWS Lightsail)
++2. Open port 17080 inbound
++3. Notify the community of your IP/domain
++4. Maintain >99% uptime
++5. Keep daemon updated to latest version
++
++To get hardcoded as a "fixed seed" in future Aime releases:
++- Submit PR to `src/p2p/net_node.inl::vSeeds`
++
++---
++
++## Network Etiquette
++
++- **Don't ban without cause** — keep `--ban-list` empty unless attacked
++- **Keep node updated** — outdated nodes can fork off the chain at hard forks
++- **Report consensus bugs** — if your node disagrees with network, file an issue
++- **Don't run vacuum nodes** — i.e., nodes that download but never serve data
++
++---
++
++Happy nodding! 🛰️
+diff --git a/src/blockchain_utilities/blockchain_ancestry.cpp b/src/blockchain_utilities/blockchain_ancestry.cpp
+index 9de1e4420..5590fb969 100644
+--- a/src/blockchain_utilities/blockchain_ancestry.cpp
++++ b/src/blockchain_utilities/blockchain_ancestry.cpp
+@@ -387,7 +387,7 @@ int main(int argc, char* argv[])
+ 
+   if (command_line::get_arg(vm, command_line::arg_help))
+   {
+-    std::cout << "Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
++    std::cout << "Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
+     std::cout << desc_options << std::endl;
+     return 1;
+   }
+diff --git a/src/blockchain_utilities/blockchain_blackball.cpp b/src/blockchain_utilities/blockchain_blackball.cpp
+index dee0f7f2a..8932dcbc7 100644
+--- a/src/blockchain_utilities/blockchain_blackball.cpp
++++ b/src/blockchain_utilities/blockchain_blackball.cpp
+@@ -1219,7 +1219,7 @@ int main(int argc, char* argv[])
+ 
+   if (command_line::get_arg(vm, command_line::arg_help))
+   {
+-    std::cout << "Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
++    std::cout << "Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
+     std::cout << desc_options << std::endl;
+     return 1;
+   }
+diff --git a/src/blockchain_utilities/blockchain_depth.cpp b/src/blockchain_utilities/blockchain_depth.cpp
+index 0ea6d7df1..b7e538ed5 100644
+--- a/src/blockchain_utilities/blockchain_depth.cpp
++++ b/src/blockchain_utilities/blockchain_depth.cpp
+@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
+ 
+   if (command_line::get_arg(vm, command_line::arg_help))
+   {
+-    std::cout << "Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
++    std::cout << "Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
+     std::cout << desc_options << std::endl;
+     return 1;
+   }
+diff --git a/src/blockchain_utilities/blockchain_export.cpp b/src/blockchain_utilities/blockchain_export.cpp
+index 2b58124a3..1040077bb 100644
+--- a/src/blockchain_utilities/blockchain_export.cpp
++++ b/src/blockchain_utilities/blockchain_export.cpp
+@@ -91,7 +91,7 @@ int main(int argc, char* argv[])
+ 
+   if (command_line::get_arg(vm, command_line::arg_help))
+   {
+-    std::cout << "Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
++    std::cout << "Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
+     std::cout << desc_options << std::endl;
+     return 1;
+   }
+diff --git a/src/blockchain_utilities/blockchain_import.cpp b/src/blockchain_utilities/blockchain_import.cpp
+index 58e152e4d..533b20d35 100644
+--- a/src/blockchain_utilities/blockchain_import.cpp
++++ b/src/blockchain_utilities/blockchain_import.cpp
+@@ -640,7 +640,7 @@ int main(int argc, char* argv[])
+ 
+   if (command_line::get_arg(vm, command_line::arg_help))
+   {
+-    std::cout << "Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
++    std::cout << "Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
+     std::cout << desc_options << std::endl;
+     return 1;
+   }
+diff --git a/src/blockchain_utilities/blockchain_prune.cpp b/src/blockchain_utilities/blockchain_prune.cpp
+index d99a46632..e1cbd4e3e 100644
+--- a/src/blockchain_utilities/blockchain_prune.cpp
++++ b/src/blockchain_utilities/blockchain_prune.cpp
+@@ -484,7 +484,7 @@ int main(int argc, char* argv[])
+ 
+   if (command_line::get_arg(vm, command_line::arg_help))
+   {
+-    std::cout << "Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
++    std::cout << "Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
+     std::cout << desc_options << std::endl;
+     return 1;
+   }
+diff --git a/src/blockchain_utilities/blockchain_prune_known_spent_data.cpp b/src/blockchain_utilities/blockchain_prune_known_spent_data.cpp
+index 08eb6ee0e..280eaed2e 100644
+--- a/src/blockchain_utilities/blockchain_prune_known_spent_data.cpp
++++ b/src/blockchain_utilities/blockchain_prune_known_spent_data.cpp
+@@ -138,7 +138,7 @@ int main(int argc, char* argv[])
+ 
+   if (command_line::get_arg(vm, command_line::arg_help))
+   {
+-    std::cout << "Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
++    std::cout << "Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
+     std::cout << desc_options << std::endl;
+     return 1;
+   }
+diff --git a/src/blockchain_utilities/blockchain_stats.cpp b/src/blockchain_utilities/blockchain_stats.cpp
+index fc082b4e5..fc1c4ae2c 100644
+--- a/src/blockchain_utilities/blockchain_stats.cpp
++++ b/src/blockchain_utilities/blockchain_stats.cpp
+@@ -176,7 +176,7 @@ int main(int argc, char* argv[])
+ 
+   if (command_line::get_arg(vm, command_line::arg_help))
+   {
+-    std::cout << "Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
++    std::cout << "Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
+     std::cout << desc_options << std::endl;
+     return 1;
+   }
+diff --git a/src/blockchain_utilities/blockchain_usage.cpp b/src/blockchain_utilities/blockchain_usage.cpp
+index 1cc785283..85a526ab5 100644
+--- a/src/blockchain_utilities/blockchain_usage.cpp
++++ b/src/blockchain_utilities/blockchain_usage.cpp
+@@ -121,7 +121,7 @@ int main(int argc, char* argv[])
+ 
+   if (command_line::get_arg(vm, command_line::arg_help))
+   {
+-    std::cout << "Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
++    std::cout << "Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
+     std::cout << desc_options << std::endl;
+     return 1;
+   }
+diff --git a/src/checkpoints/checkpoints.cpp b/src/checkpoints/checkpoints.cpp
+index 551a14af8..447c79d8b 100644
+--- a/src/checkpoints/checkpoints.cpp
++++ b/src/checkpoints/checkpoints.cpp
+@@ -182,9 +182,18 @@ namespace cryptonote
+ 
+   bool checkpoints::init_default_checkpoints(network_type nettype)
+   {
+-    // Aime: no hardcoded checkpoints. Fresh chain — checkpoints would falsely reject our blocks.
+-    // Below entries are kept as reference (Monero's mainnet/testnet/stagenet checkpoints).
+-    // Will be replaced with Aime-specific checkpoints once chain accumulates history.
++    // Aime: no hardcoded checkpoints yet — fresh chain.
++    //
++    // To add checkpoints (recommended once chain has stable history):
++    //   if (nettype == MAINNET) {
++    //     ADD_CHECKPOINT2(<height>, "<block_hash>", "<cumulative_difficulty>");
++    //     ...
++    //   }
++    //
++    // Checkpoints rejected blocks at known heights from chain reorganization.
++    // Useful after chain has thousands of blocks of stable history.
++    //
++    // Monero's checkpoints (kept below as reference for format) are skipped.
+     return true;
+     if (nettype == TESTNET)
+     {
+diff --git a/src/daemon/command_server.cpp b/src/daemon/command_server.cpp
+index fc5f1b3d7..940964d8c 100644
+--- a/src/daemon/command_server.cpp
++++ b/src/daemon/command_server.cpp
+@@ -412,7 +412,7 @@ bool t_command_server::apropos(const std::vector<std::string>& args)
+ std::string t_command_server::get_commands_str()
+ {
+   std::stringstream ss;
+-  ss << "Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << std::endl;
++  ss << "Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << std::endl;
+   ss << "Commands: " << std::endl;
+   std::string usage = m_command_lookup.get_usage();
+   boost::replace_all(usage, "\n", "\n  ");
+diff --git a/src/daemon/executor.cpp b/src/daemon/executor.cpp
+index d67bd6141..d3f4686fb 100644
+--- a/src/daemon/executor.cpp
++++ b/src/daemon/executor.cpp
+@@ -58,7 +58,7 @@ namespace daemonize
+       boost::program_options::variables_map const & vm
+     )
+   {
+-    LOG_PRINT_L0("Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ") Daemonised");
++    LOG_PRINT_L0("Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ") Daemonised");
+     return t_daemon{vm, public_rpc_port};
+   }
+ 
+diff --git a/src/daemon/main.cpp b/src/daemon/main.cpp
+index a61fbda6f..c10c89fa6 100644
+--- a/src/daemon/main.cpp
++++ b/src/daemon/main.cpp
+@@ -192,7 +192,7 @@ int main(int argc, char const * argv[])
+ 
+     if (command_line::get_arg(vm, command_line::arg_help))
+     {
+-      std::cout << "Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
++      std::cout << "Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
+       std::cout << "Usage: " + std::string{argv[0]} + " [options|settings] [daemon_command...]" << std::endl << std::endl;
+       std::cout << visible_options << std::endl;
+       return 0;
+@@ -201,7 +201,7 @@ int main(int argc, char const * argv[])
+     // Monero Version
+     if (command_line::get_arg(vm, command_line::arg_version))
+     {
+-      std::cout << "Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL;
++      std::cout << "Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL;
+       return 0;
+     }
+ 
+@@ -306,7 +306,7 @@ int main(int argc, char const * argv[])
+       tools::set_max_concurrency(command_line::get_arg(vm, daemon_args::arg_max_concurrency));
+ 
+     // logging is now set up
+-    MGINFO("Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")");
++    MGINFO("Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")");
+ 
+     // If there are positional options, we're running a daemon command
+     {
+diff --git a/src/daemonizer/posix_daemonizer.inl b/src/daemonizer/posix_daemonizer.inl
+index bd2741039..cc8e22578 100644
+--- a/src/daemonizer/posix_daemonizer.inl
++++ b/src/daemonizer/posix_daemonizer.inl
+@@ -100,7 +100,7 @@ namespace daemonizer
+     }
+     else
+     {
+-      //LOG_PRINT_L0("Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL);
++      //LOG_PRINT_L0("Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL);
+       return executor.run_interactive(vm);
+     }
+   }
+diff --git a/src/daemonizer/windows_daemonizer.inl b/src/daemonizer/windows_daemonizer.inl
+index a0086408f..671101070 100644
+--- a/src/daemonizer/windows_daemonizer.inl
++++ b/src/daemonizer/windows_daemonizer.inl
+@@ -181,7 +181,7 @@ namespace daemonizer
+     }
+     else // interactive
+     {
+-      //LOG_PRINT_L0("Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL);
++      //LOG_PRINT_L0("Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL);
+       if (command_line::has_arg(vm, arg_non_interactive))
+         return executor.run_non_interactive(vm);
+       else
+diff --git a/src/debug_utilities/cn_deserialize.cpp b/src/debug_utilities/cn_deserialize.cpp
+index 41c397bd8..dfa7c0ed9 100644
+--- a/src/debug_utilities/cn_deserialize.cpp
++++ b/src/debug_utilities/cn_deserialize.cpp
+@@ -103,7 +103,7 @@ int main(int argc, char* argv[])
+ 
+   if (command_line::get_arg(vm, command_line::arg_help))
+   {
+-    std::cout << "Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
++    std::cout << "Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
+     std::cout << desc_options << std::endl;
+     return 1;
+   }
+diff --git a/src/debug_utilities/dns_checks.cpp b/src/debug_utilities/dns_checks.cpp
+index 62854cfa3..0ad8870ce 100644
+--- a/src/debug_utilities/dns_checks.cpp
++++ b/src/debug_utilities/dns_checks.cpp
+@@ -121,7 +121,7 @@ int main(int argc, char* argv[])
+ 
+   if (command_line::get_arg(vm, command_line::arg_help))
+   {
+-    std::cout << "Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
++    std::cout << "Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
+     std::cout << desc_options << std::endl;
+     return 1;
+   }
+diff --git a/src/gen_ssl_cert/gen_ssl_cert.cpp b/src/gen_ssl_cert/gen_ssl_cert.cpp
+index cd810ed20..5800d99a0 100644
+--- a/src/gen_ssl_cert/gen_ssl_cert.cpp
++++ b/src/gen_ssl_cert/gen_ssl_cert.cpp
+@@ -121,13 +121,13 @@ int main(int argc, char* argv[])
+ 
+   if (command_line::get_arg(vm, command_line::arg_help))
+   {
+-    std::cout << "Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
++    std::cout << "Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL << ENDL;
+     std::cout << desc_options << std::endl;
+     return 0;
+   }
+   if (command_line::get_arg(vm, command_line::arg_version))
+   {
+-    std::cout << "Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL;
++    std::cout << "Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL;
+     return 0;
+   }
+ 
+diff --git a/src/p2p/net_node.inl b/src/p2p/net_node.inl
+index 3dd3c4af6..3dcc0fe9e 100644
+--- a/src/p2p/net_node.inl
++++ b/src/p2p/net_node.inl
+@@ -703,33 +703,29 @@ namespace nodetool
+   std::set<std::string> node_server<t_payload_net_handler>::get_ip_seed_nodes() const
+   {
+     std::set<std::string> full_addrs;
++    // Aime hardcoded seed nodes.
++    // Replace these with your real seed node IPs/domains once deployed.
++    // Format: "host:port" — use port 17080 (mainnet), 27080 (testnet), 37080 (stagenet)
+     if (m_nettype == cryptonote::TESTNET)
+     {
+-      full_addrs.insert("176.9.0.187:28080");
+-      full_addrs.insert("192.99.8.110:28080");
+-      full_addrs.insert("37.187.74.171:28080");
+-      full_addrs.insert("88.99.195.15:28080");
+-      full_addrs.insert("5.104.84.64:28080");
++      // Aime testnet seeds (placeholders — replace before deploy):
++      // full_addrs.insert("seed1.testnet.aime.network:27080");
++      // full_addrs.insert("seed2.testnet.aime.network:27080");
+     }
+     else if (m_nettype == cryptonote::STAGENET)
+     {
+-      full_addrs.insert("176.9.0.187:38080");
+-      full_addrs.insert("192.99.8.110:38080");
+-      full_addrs.insert("37.187.74.171:38080");
+-      full_addrs.insert("88.99.195.15:38080");
+-      full_addrs.insert("5.104.84.64:38080");
++      // Aime stagenet seeds (placeholders — replace before deploy):
++      // full_addrs.insert("seed1.stagenet.aime.network:37080");
+     }
+     else if (m_nettype == cryptonote::FAKECHAIN)
+     {
+     }
+     else
+     {
+-      full_addrs.insert("176.9.0.187:18080");
+-      full_addrs.insert("88.198.163.90:18080");
+-      full_addrs.insert("192.99.8.110:18080");
+-      full_addrs.insert("37.187.74.171:18080");
+-      full_addrs.insert("88.99.195.15:18080");
+-      full_addrs.insert("5.104.84.64:18080");
++      // Aime mainnet seeds (placeholders — replace before deploy):
++      // full_addrs.insert("seed1.aime.network:17080");
++      // full_addrs.insert("seed2.aime.network:17080");
++      // full_addrs.insert("seed3.aime.network:17080");
+     }
+     return full_addrs;
+   }
+diff --git a/src/simplewallet/simplewallet.cpp b/src/simplewallet/simplewallet.cpp
+index 39bf169f3..daee76274 100644
+--- a/src/simplewallet/simplewallet.cpp
++++ b/src/simplewallet/simplewallet.cpp
+@@ -2379,7 +2379,7 @@ bool simple_wallet::welcome(const std::vector<std::string> &args)
+ 
+ bool simple_wallet::version(const std::vector<std::string> &args)
+ {
+-  message_writer() << "Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")";
++  message_writer() << "Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")";
+   return true;
+ }
+ 
+diff --git a/src/version.cpp.in b/src/version.cpp.in
+index 100726846..a71622308 100644
+--- a/src/version.cpp.in
++++ b/src/version.cpp.in
+@@ -1,6 +1,6 @@
+ #define DEF_MONERO_VERSION_TAG "@VERSIONTAG@"
+ #define DEF_MONERO_VERSION "0.18.4.6"
+-#define DEF_MONERO_RELEASE_NAME "Fluorine Fermi"
++#define DEF_MONERO_RELEASE_NAME "Aime Genesis"
+ #define DEF_MONERO_VERSION_FULL DEF_MONERO_VERSION "-" DEF_MONERO_VERSION_TAG
+ #define DEF_MONERO_VERSION_IS_RELEASE @VERSION_IS_RELEASE@
+ 
+diff --git a/src/wallet/wallet_args.cpp b/src/wallet/wallet_args.cpp
+index ce13fc573..754ef1a4c 100644
+--- a/src/wallet/wallet_args.cpp
++++ b/src/wallet/wallet_args.cpp
+@@ -148,7 +148,7 @@ namespace wallet_args
+ 
+       if (command_line::get_arg(vm, command_line::arg_help))
+       {
+-        Print(print) << "Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL;
++        Print(print) << "Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")" << ENDL;
+         Print(print) << wallet_args::tr("This is the command line monero wallet. It needs to connect to a monero\n"
+ 												  "daemon to work correctly.") << ENDL;
+         Print(print) << wallet_args::tr("Usage:") << ENDL << "  " << usage;
+@@ -158,7 +158,7 @@ namespace wallet_args
+       }
+       else if (command_line::get_arg(vm, command_line::arg_version))
+       {
+-        Print(print) << "Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")";
++        Print(print) << "Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")";
+         should_terminate = true;
+         return true;
+       }
+@@ -209,7 +209,7 @@ namespace wallet_args
+     if (!command_line::is_arg_defaulted(vm, arg_max_concurrency))
+       tools::set_max_concurrency(command_line::get_arg(vm, arg_max_concurrency));
+ 
+-    Print(print) << "Monero '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")";
++    Print(print) << "Aime '" << MONERO_RELEASE_NAME << "' (v" << MONERO_VERSION_FULL << ")";
+ 
+     if (!command_line::is_arg_defaulted(vm, arg_log_level))
+       MINFO("Setting log level = " << command_line::get_arg(vm, arg_log_level));
+-- 
+2.43.0
+

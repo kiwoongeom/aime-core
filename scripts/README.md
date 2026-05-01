@@ -1,78 +1,88 @@
-# Aime Scripts — Daemon, Mining, Wallet
+# Aime Helper Scripts
 
-Convenience scripts for running Aime on Windows (with WSL Ubuntu).
+Convenience launchers for daemon, mining, and wallet on Linux and Windows (with WSL Ubuntu).
 
 ## Folder layout
 ```
 scripts/
-├── linux/
-│   └── aime-daemon.sh         # Daemon launcher (P2P mode)
-└── windows/
-    ├── aime-start.bat          # Start daemon + mining + wallet
-    ├── aime-stop.bat           # Stop everything
-    └── aime-wallet.bat         # Open wallet only (assumes daemon running)
+  linux/
+    aime-daemon.sh       Daemon launcher (P2P mode)
+    aime-wallet.sh       Wallet CLI launcher
+  windows/
+    aime-start.bat       Start daemon + mining + wallet (one click)
+    aime-stop.bat        Stop everything
+    aime-wallet.bat      Open wallet alone (daemon must be running)
 ```
 
 ## Prerequisites
 
-1. **WSL Ubuntu 24.04** with `aimed` and `aime-wallet-cli` built
-   - Default expected paths: `/root/aime/src/aime/build/Linux/aime-main/release/bin/`
-   - Override with `AIME_DAEMON` environment variable
-2. **Wallet created** at `/root/aime-real`
-3. **Wallet address saved** at `%USERPROFILE%\.aime\last-wallet-address.txt`
-   (Use `aime-set-address.bat` from aime-miner repo)
-4. **(Optional) Wallet password** at `%USERPROFILE%\.aime\wallet-password.txt`
-   for auto-login. Plain-text — only acceptable for low-stakes wallets.
+1. **Build aime-core** (one-time):
+   ```bash
+   git clone https://github.com/kiwoongeom/aime-core.git ~/aime-core
+   cd ~/aime-core
+   make release
+   ```
+   This puts `aimed` and `aime-wallet-cli` in
+   `~/aime-core/build/Linux/aime-main/release/bin/`.
 
-## Configuration
+2. **Get the miner package** (for mining):
+   ```bash
+   git clone https://github.com/kiwoongeom/aime-miner.git ~/aime-miner
+   ```
 
-### Address (required)
-```cmd
-echo Your-95-char-address > %USERPROFILE%\.aime\last-wallet-address.txt
-```
+3. **Set your wallet address** (for mining rewards):
+   ```bash
+   ~/aime-miner/aime-set-address.sh A...your-95-char-address...
+   ```
+   This saves to `~/.aime/last-wallet-address.txt`.
 
-### Wallet auto-login password (optional)
-```cmd
-echo your-password > %USERPROFILE%\.aime\wallet-password.txt
-```
-
-### Priority peer for daemon (optional, for connecting to a known seed/friend)
-In WSL:
-```bash
-echo "192.168.1.50:17080" > ~/.aime/priority-peer.txt
-```
-Or environment variable:
-```bash
-export AIME_PRIORITY_PEER=192.168.1.50:17080
-```
+4. **Create a wallet** (one-time):
+   ```bash
+   ~/aime-core/build/Linux/aime-main/release/bin/aime-wallet-cli \
+       --offline --generate-new-wallet ~/aime-real
+   ```
+   Write down the 25-word seed somewhere safe.
 
 ## Usage
 
-### Start mining + wallet
-Double-click `aime-start.bat`:
-1. Cleans up old processes
-2. Opens daemon window (foreground for log visibility)
-3. Polls daemon RPC until ready (up to 60s)
-4. Sends `start_mining` RPC to daemon (4 threads default)
-5. Opens wallet window (auto-login if password file present)
+### Linux
+```bash
+~/aime-core/scripts/linux/aime-daemon.sh   &   # in background
+~/aime-core/scripts/linux/aime-wallet.sh        # interactive wallet
+```
 
-### Stop everything
-Double-click `aime-stop.bat`:
-1. Closes wallet
-2. Calls `stop_mining` RPC
-3. Kills daemon
+### Windows (with WSL Ubuntu)
+- Double-click `aime-start.bat` — opens daemon, starts mining, opens wallet
+- Double-click `aime-stop.bat` — stops everything
+- Double-click `aime-wallet.bat` — opens wallet only
 
-### Just open wallet
-Double-click `aime-wallet.bat` (daemon must be running).
+## Configuration (Linux env vars)
+
+All scripts read these optional environment variables:
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `AIME_DAEMON` | Path to `aimed` binary | auto-detect in `~/aime-core/build/.../bin/aimed` |
+| `AIME_WALLET_CLI` | Path to `aime-wallet-cli` | auto-detect |
+| `AIME_WALLET_FILE` | Wallet file path | `~/aime-real` |
+| `AIME_DATA_DIR` | Blockchain data dir | `~/.aime` |
+| `AIME_PRIORITY_PEER` | LAN peer (e.g. `192.168.1.50:17080`) | none (uses hardcoded seed nodes) |
+| `AIME_DAEMON_ADDR` | Wallet daemon endpoint | `127.0.0.1:17081` |
+
+## Configuration (Windows files)
+
+| File | Purpose |
+|---|---|
+| `%USERPROFILE%\.aime\last-wallet-address.txt` | Mining payout address (required) |
+| `%USERPROFILE%\.aime\wallet-password.txt` | Wallet password for auto-login (optional) |
 
 ## Adjusting
 
-- **Thread count for mining**: edit `threads_count=4` in `aime-start.bat` (line ~75)
-- **Daemon flags**: edit `aime-daemon.sh` exec args
-- **Different daemon binary path**: set `AIME_DAEMON` env var
+- **Mining thread count**: edit `threads_count=4` in `aime-start.bat`
+- **Different daemon location**: set `AIME_DAEMON` in WSL profile
 
 ## Security notes
 
-- The wallet password file is plain text. For real-value wallets, do NOT save the password — let the wallet prompt instead.
+- The wallet password file is plain text. For real-value wallets, do NOT save the password.
 - The daemon RPC listens on `127.0.0.1:17081` (local only). Never expose RPC externally.
-- The daemon P2P port `17080` listens on all interfaces. Use a firewall to restrict if needed.
+- The daemon P2P port `17080` listens on all interfaces. Restrict via firewall as needed.

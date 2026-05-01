@@ -53,7 +53,7 @@ sudo apt-get install -y build-essential cmake pkg-config ccache git \
   libpgm-dev libhidapi-dev libusb-1.0-0-dev libprotobuf-dev protobuf-compiler \
   libudev-dev libnorm-dev libgtest-dev
 
-git clone <this-repo> aime
+git clone --recursive <this-repo> aime
 cd aime
 make release -j$(nproc)
 # → ~3-5 min on modern multi-core CPU

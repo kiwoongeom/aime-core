@@ -18,7 +18,7 @@ scripts/
 
 1. **Build aime-core** (one-time):
    ```bash
-   git clone https://github.com/kiwoongeom/aime-core.git ~/aime-core
+   git clone --recursive https://github.com/kiwoongeom/aime-core.git ~/aime-core
    cd ~/aime-core
    make release
    ```

@@ -41,7 +41,7 @@ You need an AIME address to receive mining rewards. Three sub-options:
 
 #### Option A1.a — Use the GUI wallet (easiest, Linux/WSL with desktop)
 ```bash
-git clone https://github.com/kiwoongeom/aime-gui.git
+git clone --recursive https://github.com/kiwoongeom/aime-gui.git
 cd aime-gui
 sudo apt-get install -y qttools5-dev qttools5-dev-tools qtdeclarative5-dev libqt5svg5-dev \
   qml-module-qtquick-controls qml-module-qtquick-controls2 qml-module-qtquick-dialogs \
@@ -55,7 +55,7 @@ GUI opens → "Create new wallet" → write down 25-word seed + address.
 
 #### Option A1.b — Use the CLI wallet (lighter)
 ```bash
-git clone https://github.com/kiwoongeom/aime-core.git
+git clone --recursive https://github.com/kiwoongeom/aime-core.git
 cd aime-core
 sudo apt-get install -y build-essential cmake pkg-config ccache git \
   libboost-all-dev libssl-dev libzmq3-dev libunbound-dev libsodium-dev \
@@ -102,7 +102,7 @@ Mining needs a daemon to submit work to. Two options:
 
 If you built aime-core in step A1.b, you already have aimed. Otherwise:
 ```bash
-git clone https://github.com/kiwoongeom/aime-core.git
+git clone --recursive https://github.com/kiwoongeom/aime-core.git
 cd aime-core
 sudo apt-get install -y [build deps from A1.b]
 make release -j$(nproc)
@@ -216,9 +216,9 @@ Same as Scenario A1 (GUI or CLI option).
 ### D1. Clone all repos
 ```bash
 mkdir -p ~/aime-dev && cd ~/aime-dev
-git clone https://github.com/kiwoongeom/aime-core.git
+git clone --recursive https://github.com/kiwoongeom/aime-core.git
 git clone https://github.com/kiwoongeom/aime-explorer.git
-git clone https://github.com/kiwoongeom/aime-gui.git
+git clone --recursive https://github.com/kiwoongeom/aime-gui.git
 git clone https://github.com/kiwoongeom/aime-miner.git
 ```
 

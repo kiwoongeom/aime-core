@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 REM ============================================
 REM   Aime Start - Daemon + Mining + Wallet
 REM ============================================
@@ -35,19 +36,19 @@ if not exist "%USERPROFILE%\.aime\last-wallet-address.txt" (
     exit /b 1
 )
 set /p ADDR=<"%USERPROFILE%\.aime\last-wallet-address.txt"
-if "%ADDR%"=="" (
+if "!ADDR!"=="" (
     echo ERROR: Wallet address file is empty.
     pause
     exit /b 1
 )
-echo Address: %ADDR:~0,16%...
+echo Address: !ADDR:~0,16!...
 echo.
 
 REM Read wallet password (optional auto-login)
 set "PASS_FLAG="
 if exist "%USERPROFILE%\.aime\wallet-password.txt" (
     set /p WALLET_PASS=<"%USERPROFILE%\.aime\wallet-password.txt"
-    set "PASS_FLAG=--password %WALLET_PASS%"
+    set "PASS_FLAG=--password !WALLET_PASS!"
     echo Wallet auto-login enabled
 ) else (
     echo Wallet password not saved - you will be prompted
@@ -72,7 +73,7 @@ timeout /t 2 /nobreak >nul
 set /a TRIES=TRIES+1
 powershell -NoProfile -Command "try { Invoke-WebRequest 'http://127.0.0.1:17081/get_info' -UseBasicParsing -TimeoutSec 2 | Out-Null; exit 0 } catch { exit 1 }" 2>nul
 if errorlevel 1 (
-    if %TRIES% GTR 30 (
+    if !TRIES! GTR 30 (
         echo ERROR: Daemon did not respond on port 17081 within 60 seconds.
         echo Check the Daemon window for errors.
         pause
@@ -84,12 +85,12 @@ echo Daemon ready.
 
 REM Start mining via RPC
 echo [3/4] Starting mining...
-powershell -NoProfile -Command "$body = @{miner_address='%ADDR%'; threads_count=4} | ConvertTo-Json; $r = Invoke-WebRequest 'http://127.0.0.1:17081/start_mining' -Method POST -ContentType 'application/json' -Body $body -UseBasicParsing; ($r.Content | ConvertFrom-Json).status"
+powershell -NoProfile -Command "$body = @{miner_address='!ADDR!'; threads_count=4} | ConvertTo-Json; $r = Invoke-WebRequest 'http://127.0.0.1:17081/start_mining' -Method POST -ContentType 'application/json' -Body $body -UseBasicParsing; ($r.Content | ConvertFrom-Json).status"
 echo.
 
 REM Open wallet
 echo [4/4] Opening Wallet window...
-start "Aime Wallet" cmd /k "wsl -- bash -lc '~/aime-core/scripts/linux/aime-wallet.sh %PASS_FLAG%'"
+start "Aime Wallet" cmd /k "wsl -- bash -lc '~/aime-core/scripts/linux/aime-wallet.sh !PASS_FLAG!'"
 
 echo.
 echo ============================================
@@ -106,4 +107,5 @@ echo To stop: run aime-stop.bat
 echo Default mining threads: 4 (edit this script to change)
 echo.
 timeout /t 8 >nul
+endlocal
 exit

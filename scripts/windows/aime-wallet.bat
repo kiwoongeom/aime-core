@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 REM ============================================
 REM   Aime Wallet - opens CLI wallet
 REM ============================================
@@ -34,7 +35,7 @@ REM Optional auto-login
 set "PASS_FLAG="
 if exist "%USERPROFILE%\.aime\wallet-password.txt" (
     set /p WALLET_PASS=<"%USERPROFILE%\.aime\wallet-password.txt"
-    set "PASS_FLAG=--password %WALLET_PASS%"
+    set "PASS_FLAG=--password !WALLET_PASS!"
     echo Auto-login enabled
 ) else (
     echo Will prompt for wallet password
@@ -49,8 +50,9 @@ echo.
 echo ============================================
 echo.
 
-wsl -- bash -lc "~/aime-core/scripts/linux/aime-wallet.sh %PASS_FLAG%"
+wsl -- bash -lc "~/aime-core/scripts/linux/aime-wallet.sh !PASS_FLAG!"
 
 echo.
 echo Wallet closed.
+endlocal
 pause

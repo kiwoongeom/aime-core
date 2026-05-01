@@ -1,16 +1,39 @@
 # Aime (AIME)
 
-> Privacy-focused cryptocurrency forked from Monero v0.18, with custom chain identity.
-> CPU-mineable via RandomX. Fully independent network.
+> Privacy-focused cryptocurrency forked from Monero v0.18.
+> Independent mainnet, live since 2026-04-27. CPU-mineable via RandomX.
 
-**Created by:** Kiwoong Eom
-**Email:** eric.eom@gmail.com
-**GitHub:** [@kiwoongeom](https://github.com/kiwoongeom)
-**Project started:** 2026-04-27
+**Website:** [aimecoin.net](https://aimecoin.net) ·
+**Seed node:** `seed1.aimecoin.net:17080` ·
+**Genesis hash:** `b78e36c0afe10470ec6dcc71c8ae8c1e4847d979aa788deb67dfa837bdcdfb29`
 
+[![Status](https://img.shields.io/badge/mainnet-live-success)](https://aimecoin.net)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
 [![Base](https://img.shields.io/badge/forked%20from-Monero%20v0.18.4.6-orange.svg)](https://github.com/monero-project/monero)
 [![PoW](https://img.shields.io/badge/PoW-RandomX-purple.svg)](https://github.com/tevador/RandomX)
+
+**Author:** Kiwoong Eom · eric.eom@gmail.com · [@kiwoongeom](https://github.com/kiwoongeom)
+
+---
+
+## Quick start
+
+```bash
+# Build daemon + CLI wallet (Linux)
+git clone --recursive https://github.com/kiwoongeom/aime-core
+cd aime-core && make release
+
+# Run daemon (auto-discovers seed1.aimecoin.net)
+./scripts/linux/aime-daemon.sh
+
+# Mine (separate clone)
+git clone https://github.com/kiwoongeom/aime-miner
+cd aime-miner
+./aime-set-address.sh A...your-95-char-address...
+./aime-mine.sh
+```
+
+Windows users with WSL: see `scripts/windows/` for one-click `.bat` launchers.
 
 ---
 

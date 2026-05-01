@@ -722,10 +722,11 @@ namespace nodetool
     }
     else
     {
-      // Aime mainnet seeds (placeholders — replace before deploy):
-      // full_addrs.insert("seed1.aime.network:17080");
-      // full_addrs.insert("seed2.aime.network:17080");
-      // full_addrs.insert("seed3.aime.network:17080");
+      // Aime mainnet seeds:
+      full_addrs.insert("seed1.aimecoin.net:17080");
+      // Add more seed nodes here as the network grows:
+      // full_addrs.insert("seed2.aimecoin.net:17080");
+      // full_addrs.insert("seed3.aimecoin.net:17080");
     }
     return full_addrs;
   }
